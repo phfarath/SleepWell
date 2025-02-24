@@ -26,7 +26,7 @@ type Route = {
   protected?: boolean; // Se true, exibe apenas se o usuário estiver autenticado
 };
 
-export function MainNav(props: MainNavProps) {
+export function MainNav({ hideAuthLinks = false }: MainNavProps) {
   const pathname = usePathname();
   const { setTheme } = useTheme();
   const [authenticated, setAuthenticated] = useState<boolean>(false);
@@ -42,19 +42,19 @@ export function MainNav(props: MainNavProps) {
 
   // Defina todas as rotas com um indicador "protected" para as que precisam de autenticação
   const allRoutes: Route[] = [
-    { href: "/dashboard", label: "Dashboard", active: pathname === "/dashboard", protected: true },
-    { href: "/sleep", label: "Sono", active: pathname === "/sleep", protected: true },
-    { href: "/habits", label: "Hábitos", active: pathname === "/habits", protected: true },
-    { href: "/tasks", label: "Tarefas", active: pathname === "/tasks", protected: true },
-    { href: "/shopping", label: "Compras", active: pathname === "/shopping", protected: true },
+    { href: "/dashboard", label: "Dashboard", active: pathname === "/dashboard", protected: false },
+    { href: "/sleep", label: "Sono", active: pathname === "/sleep", protected: false },
+    { href: "/habits", label: "Hábitos", active: pathname === "/habits", protected: false },
+    { href: "/tasks", label: "Tarefas", active: pathname === "/tasks", protected: false },
+    { href: "/shopping", label: "Compras", active: pathname === "/shopping", protected: false },
     { href: "/login", label: "Login", active: pathname === "/login", protected: false },
   ];
 
   // Se o usuário não estiver autenticado, filtre as rotas protegidas
-  const routes = authenticated ? allRoutes : allRoutes.filter((route) => !route.protected);
+  let routes = authenticated ? allRoutes : allRoutes.filter((route) => !route.protected);
 
-   // Se hideAuthLinks for true, filtre as rotas de login e cadastro
-   if (hideAuthLinks) {
+  // Se hideAuthLinks for true, filtre as rotas de login e cadastro
+  if (hideAuthLinks) {
     routes = routes.filter(
       (route) => route.href !== "/login" && route.href !== "/signup"
     );

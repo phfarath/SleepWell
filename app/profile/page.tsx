@@ -36,7 +36,6 @@ export default function Profile() {
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b p-4 flex items-center justify-between">
-        <MainNav />
         <MainNav hideAuthLinks />
         <Button variant="outline" onClick={handleLogout}>
           Sair
