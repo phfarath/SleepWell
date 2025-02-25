@@ -42,12 +42,14 @@ export function MainNav({ hideAuthLinks = false }: MainNavProps) {
 
   // Defina todas as rotas com um indicador "protected" para as que precisam de autenticação
   const allRoutes: Route[] = [
-    { href: "/dashboard", label: "Dashboard", active: pathname === "/dashboard", protected: false },
-    { href: "/sleep", label: "Sono", active: pathname === "/sleep", protected: false },
-    { href: "/habits", label: "Hábitos", active: pathname === "/habits", protected: false },
-    { href: "/tasks", label: "Tarefas", active: pathname === "/tasks", protected: false },
-    { href: "/shopping", label: "Compras", active: pathname === "/shopping", protected: false },
-    { href: "/login", label: "Login", active: pathname === "/login", protected: false },
+    { href: "/profile/dashboard", label: "Dashboard", active: pathname === "/dashboard", protected: true },
+    { href: "/profile/sleep", label: "Sono", active: pathname === "/sleep", protected: true },
+    { href: "/profile/habits", label: "Hábitos", active: pathname === "/habits", protected: true },
+    { href: "/profile/tasks", label: "Tarefas", active: pathname === "/tasks", protected: true },
+    { href: "/profile/shopping", label: "Compras", active: pathname === "/shopping", protected: true },
+    { href: "/profile", label: "Meu Perfil", active: pathname === "/profile", protected: true },
+    { href: "/about", label: "About", active: pathname === "/about", protected: false },
+    { href: "/login", label: "Login", active: pathname === "/login", protected: false }
   ];
 
   // Se o usuário não estiver autenticado, filtre as rotas protegidas
@@ -56,7 +58,7 @@ export function MainNav({ hideAuthLinks = false }: MainNavProps) {
   // Se hideAuthLinks for true, filtre as rotas de login e cadastro
   if (hideAuthLinks) {
     routes = routes.filter(
-      (route) => route.href !== "/login" && route.href !== "/signup"
+      (route) => route.href !== "/login" && route.href !== "/signup" && route.href !== "/about"
     );
   }
 

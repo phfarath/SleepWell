@@ -34,7 +34,7 @@ export default function Home() {
                 <Link href="/login">Começe Agora</Link>
               </Button>
               <Button size="lg" variant="outline" asChild>
-                <Link href="#features">Saiba Mais</Link>
+                <Link href="/about">Saiba Mais</Link>
               </Button>
             </div>
           </div>

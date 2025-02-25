@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MainNav } from "@/components/main-nav";
 import { Moon } from "lucide-react";
+import SignupForm from "./signup";
 
-export default function Signup() {
+export default function SignupPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -46,40 +47,7 @@ export default function Signup() {
       </header>
 
       {/* Conteúdo principal (formulário) */}
-      <div className="flex flex-1 items-center justify-center">
-      <form onSubmit={handleSignup} className="space-y-4 p-6 border rounded-lg shadow-md w-96 dark:border-slate-900 dark:bg-indigo-950/30">
-        <h2 className="text-2xl font-semibold text-center">Criar Conta</h2>
-        <Input
-          type="text"
-          placeholder="Nome"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-        />
-        <Input
-          type="email"
-          placeholder="E-mail"
-          value={email}
-          autoComplete="email"
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-        <Input
-          type="password"
-          placeholder="Senha"
-          value={password}
-          autoComplete="current-password"
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? "Criando conta..." : "Cadastrar"}
-        </Button>
-        <p className="text-sm text-center">
-          Já tem uma conta? <a href="/login" className="text-blue-600">Faça login</a>
-        </p>
-      </form>
-    </div>
+        <SignupForm />
 
       {/* Rodapé (opcional) */}
       <footer className="border-t py-6 md:py-0">

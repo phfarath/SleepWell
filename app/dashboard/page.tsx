@@ -1,11 +1,10 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { Card } from "@/components/ui/card"
-import { MainNav } from "@/components/main-nav"
-import { Moon, Sun, Bed, Clock, Activity, TrendingUp } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { useToast } from "@/hooks/use-toast"
+import { useEffect, useState } from "react";
+import { Card } from "@/components/ui/card";
+import { Sun, Bed, Clock, Activity, TrendingUp, Moon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 import {
   LineChart,
   Line,
@@ -13,134 +12,146 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer
-} from "recharts"
-import { supabase } from "@/lib/supabase"
-import { format } from "date-fns"
+  ResponsiveContainer,
+} from "recharts";
+import { supabase } from "@/lib/supabase";
+import { format, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 type RegistroSono = {
-  bedtime: string
-  wake_time: string
-  quality: number
-  mood: string
-}
+  bedtime: string;
+  wake_time: string;
+  quality: number;
+  mood: string;
+};
 
 export default function Dashboard() {
-  const [dadosSono, setDadosSono] = useState<any[]>([])
-  const { toast } = useToast()
+  const [dadosSono, setDadosSono] = useState<any[]>([]);
+  const { toast } = useToast();
 
   useEffect(() => {
     const buscarDadosSono = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser()
+        const { data: { user } } = await supabase.auth.getUser();
 
         if (!user) {
           toast({
             title: "Autenticação necessária",
             description: "Por favor, faça login para ver seu painel",
             variant: "destructive",
-          })
-          return
+          });
+          return;
         }
 
         const { data, error } = await supabase
           .from("sleep_logs")
           .select("*")
           .eq("user_id", user.id)
-          .order("created_at", { ascending: false })
-          .limit(7)
+          .order("bedtime", { ascending: false })
+          .limit(7);
 
-        if (error) throw error
+        if (error) throw error;
 
-        const dadosFormatados = data.map((log: RegistroSono) => ({
-          dia: format(new Date(log.bedtime), "EEE"),
-          horas: (new Date(log.wake_time).getTime() - new Date(log.bedtime).getTime()) / (1000 * 60 * 60),
-          qualidade: log.quality,
-        }))
+        const dadosFormatados = data.map((log: RegistroSono) => {
+          const bedtime = new Date(log.bedtime);
+          const wakeTime = new Date(log.wake_time);
+          const horasDormidas = (wakeTime.getTime() - bedtime.getTime()) / (1000 * 60 * 60);
 
-        setDadosSono(dadosFormatados.reverse())
+          return {
+            dia: format(bedtime, "EEEE", { locale: ptBR }), // Nome do dia da semana
+            horas: horasDormidas.toFixed(1),
+            qualidade: log.quality,
+            horaDormir: format(bedtime, "HH:mm"),
+            horaAcordar: format(wakeTime, "HH:mm"),
+          };
+        });
+
+        setDadosSono(dadosFormatados.reverse());
       } catch (error) {
-        console.error("Erro ao buscar dados do sono:", error)
+        console.error("Erro ao buscar dados do sono:", error);
         toast({
           title: "Erro",
           description: "Falha ao carregar dados do sono",
           variant: "destructive",
-        })
+        });
       }
-    }
+    };
 
-    buscarDadosSono()
-  }, [toast])
+    buscarDadosSono();
+  }, [toast]);
+
+  // Cálculo das médias
+  const mediaSono = dadosSono.length
+    ? (dadosSono.reduce((acc, curr) => acc + parseFloat(curr.horas), 0) / dadosSono.length).toFixed(1)
+    : "N/A";
+
+  const mediaQualidade = dadosSono.length
+    ? (dadosSono.reduce((acc, curr) => acc + curr.qualidade, 0) / dadosSono.length).toFixed(0)
+    : "N/A";
+
+  const mediaHoraAcordar = dadosSono.length
+    ? dadosSono[Math.floor(dadosSono.length / 2)].horaAcordar // directly use the formatted time
+    : "N/A";
+
+  const mediaHoraDormir = dadosSono.length
+    ? dadosSono[Math.floor(dadosSono.length / 2)].horaDormir // directly use the formatted time
+    : "N/A";
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto flex h-14 items-center px-4 sm:px-6 md:px-8">
-          <div className="mr-4 hidden md:flex">
-            <a href="/" className="mr-6 flex items-center space-x-2">
-              <Moon className="h-6 w-6" />
-              <span className="hidden font-bold sm:inline-block">
-                SleepWell
-              </span>
-            </a>
-          </div>
-          <MainNav />
-        </div>
-      </header>
-
       <main className="flex-1 px-6 md:px-12 lg:px-24">
         <div className="space-y-6 pb-8 pt-6 md:pb-12 md:pt-10 lg:py-32 px-4 sm:px-6 md:px-8">
           <div className="flex items-center justify-between">
             <h1 className="text-3xl font-bold">Painel</h1>
-            <Button>
+            <Button onClick={() => window.location.href = "/profile/sleep"}>
               <Clock className="mr-2 h-4 w-4" />
               Registrar Sono
             </Button>
           </div>
 
           <div className="grid gap-6 md:grid-cols-4">
+            {/* Média de Sono */}
             <Card className="p-4">
               <div className="flex items-center gap-2">
                 <Bed className="h-4 w-4 text-primary" />
                 <h3 className="font-semibold">Média de Sono</h3>
               </div>
-              <p className="mt-2 text-2xl font-bold">
-                {dadosSono.length > 0
-                  ? `${(dadosSono.reduce((acc, curr) => acc + curr.horas, 0) / dadosSono.length).toFixed(1)}h`
-                  : "N/A"}
-              </p>
+              <p className="mt-2 text-2xl font-bold">{mediaSono}h</p>
               <p className="text-sm text-muted-foreground">Últimos 7 dias</p>
             </Card>
+
+            {/* Qualidade do Sono */}
             <Card className="p-4">
               <div className="flex items-center gap-2">
                 <Activity className="h-4 w-4 text-primary" />
                 <h3 className="font-semibold">Qualidade do Sono</h3>
               </div>
-              <p className="mt-2 text-2xl font-bold">
-                {dadosSono.length > 0
-                  ? `${(dadosSono.reduce((acc, curr) => acc + curr.qualidade, 0) / dadosSono.length).toFixed(0)}%`
-                  : "N/A"}
-              </p>
+              <p className="mt-2 text-2xl font-bold">{mediaQualidade}%</p>
               <p className="text-sm text-muted-foreground">Últimos 7 dias</p>
             </Card>
+
+            {/* Média Hora de Acordar */}
             <Card className="p-4">
               <div className="flex items-center gap-2">
                 <Sun className="h-4 w-4 text-primary" />
                 <h3 className="font-semibold">Média Hora de Acordar</h3>
               </div>
-              <p className="mt-2 text-2xl font-bold">7:30 AM</p>
+              <p className="mt-2 text-2xl font-bold">{mediaHoraAcordar}</p>
               <p className="text-sm text-muted-foreground">Esta Semana</p>
             </Card>
+
+            {/* Média Hora de Dormir */}
             <Card className="p-4">
               <div className="flex items-center gap-2">
                 <Moon className="h-4 w-4 text-primary" />
                 <h3 className="font-semibold">Média Hora de Dormir</h3>
               </div>
-              <p className="mt-2 text-2xl font-bold">11:00 PM</p>
+              <p className="mt-2 text-2xl font-bold">{mediaHoraDormir}</p>
               <p className="text-sm text-muted-foreground">Esta Semana</p>
             </Card>
           </div>
 
+          {/* Gráfico de Tendências do Sono */}
           <Card className="p-6">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-semibold">Tendências do Sono</h2>
@@ -177,5 +188,5 @@ export default function Dashboard() {
         </div>
       </main>
     </div>
-  )
+  );
 }
