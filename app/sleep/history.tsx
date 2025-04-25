@@ -60,10 +60,16 @@ export default function SleepHistory() {
     fetchSleepLogs();
   }, [router, toast]);
 
+  // Função para ajustar o horário para GMT-3
+  const adjustToGMT3 = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Date(date.getTime() + 3 * 60 * 60 * 1000);
+  };
+
   // Função para calcular a duração do sono em horas e minutos
   const calcularDuracaoSono = (bedtime: string, wakeTime: string) => {
-    const inicio = new Date(bedtime);
-    const fim = new Date(wakeTime);
+    const inicio = adjustToGMT3(bedtime);
+    const fim = adjustToGMT3(wakeTime);
     
     const horasCompletas = differenceInHours(fim, inicio);
     const minutosRestantes = differenceInMinutes(fim, inicio) % 60;
@@ -146,12 +152,12 @@ export default function SleepHistory() {
                   <div className="space-y-3">
                     <div className="flex items-center gap-2 text-sm">
                       <Moon className="h-4 w-4 text-indigo-500" />
-                      <span>Dormiu às {format(new Date(log.bedtime), "HH:mm")}</span>
+                      <span>Dormiu às {format(adjustToGMT3(log.bedtime), "HH:mm")}</span>
                     </div>
                     
                     <div className="flex items-center gap-2 text-sm">
                       <Sunrise className="h-4 w-4 text-amber-500" />
-                      <span>Acordou às {format(new Date(log.wake_time), "HH:mm")}</span>
+                      <span>Acordou às {format(adjustToGMT3(log.wake_time), "HH:mm")}</span>
                     </div>
                     
                     <div className="flex items-center gap-2 text-sm">
