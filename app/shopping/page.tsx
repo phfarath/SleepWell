@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
-import { Moon, Plus, CheckCircle2, ShoppingBag, Trash2 } from "lucide-react"
+import { Moon, Plus, CheckCircle2, List, Trash2, Edit2, FolderOpen } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -15,21 +15,22 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { supabase } from "@/lib/supabase"
 
-export default function Compras() {
+export default function Lists() {
   const [listas, setListas] = useState<any[]>([])
   const [mostrarNovaLista, setMostrarNovaLista] = useState(false)
   const [mostrarNovoItem, setMostrarNovoItem] = useState(false)
+  const [mostrarEditarItem, setMostrarEditarItem] = useState(false)
   const [listaSelecionada, setListaSelecionada] = useState(null)
+  const [itemEditando, setItemEditando] = useState<any>(null)
   const [carregando, setCarregando] = useState(true)
   const [novaLista, setNovaLista] = useState("")
   const [novoItem, setNovoItem] = useState({ nome: "", quantidade: 1 })
 
-  // Fetch all shopping lists and their items
+  // Fetch all lists and their items
   const buscarListas = async () => {
     try {
       setCarregando(true)
 
-      // Fetch lists
       const { data: listasData, error: listasError } = await supabase
         .from('shopping_lists')
         .select('*')
@@ -45,7 +46,6 @@ export default function Compras() {
         return
       }
 
-      // For each list, fetch its items
       const listasComItens = await Promise.all(
         listasData.map(async (lista) => {
           const { data: itensData, error: itensError } = await supabase
@@ -72,13 +72,12 @@ export default function Compras() {
       setListas(listasComItens)
     } catch (error) {
       console.error('Erro completo:', JSON.stringify(error, null, 2))
-      alert('Não foi possível carregar as listas de compras')
+      alert('Não foi possível carregar as listas')
     } finally {
       setCarregando(false)
     }
   }
 
-  // Create a new shopping list
   const criarNovaLista = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!novaLista.trim()) return
@@ -88,30 +87,56 @@ export default function Compras() {
         .from('shopping_lists')
         .insert([{
           name: novaLista,
-          user_id: (await supabase.auth.getUser()).data.user?.id // Add the user ID
+          user_id: (await supabase.auth.getUser()).data.user?.id
         }])
         .select()
 
       if (error) {
-        console.error('Erro detalhado ao criar lista:', error)
+        console.error('Erro ao criar lista:', error)
         throw error
       }
 
-      // Refresh lists after creation
       buscarListas()
       setNovaLista("")
       setMostrarNovaLista(false)
     } catch (error) {
       console.error('Erro ao criar lista:', error)
       if (error instanceof Error) {
-        alert('Não foi possível criar a lista de compras: ' + error.message)
-      } else {
-        alert('Não foi possível criar a lista de compras')
+        alert('Não foi possível criar a lista: ' + error.message)
       }
     }
   }
 
-  // Add a new item to a shopping list
+  // Edit item function
+  const editarItem = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    try {
+      if (!itemEditando || !itemEditando.nome.trim()) {
+        throw new Error("Nome do item é obrigatório")
+      }
+
+      const { error } = await supabase
+        .from('shopping_items')
+        .update({
+          name: itemEditando.nome,
+          quantity: itemEditando.quantidade
+        })
+        .eq('id', itemEditando.id)
+
+      if (error) {
+        throw error
+      }
+
+      await buscarListas()
+      setMostrarEditarItem(false)
+      setItemEditando(null)
+    } catch (error) {
+      console.error('Erro ao editar item:', error)
+      alert('Não foi possível editar o item: ' + (error instanceof Error ? error.message : 'Erro desconhecido'))
+    }
+  }
+
+  // Add a new item to a list
   const adicionarItem = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!novoItem.nome.trim() || !listaSelecionada) return
@@ -128,64 +153,48 @@ export default function Compras() {
         .select()
 
       if (error) {
-        console.error('Erro detalhado ao adicionar item:', error)
+        console.error('Erro ao adicionar item:', error)
         throw error
       }
 
-      // Refresh lists after adding item
       buscarListas()
       setNovoItem({ nome: "", quantidade: 1 })
       setMostrarNovoItem(false)
     } catch (error) {
       console.error('Erro ao adicionar item:', error)
       if (error instanceof Error) {
-        alert('Não foi possível adicionar o item à lista: ' + error.message)
-      } else {
-        alert('Não foi possível adicionar o item à lista')
+        alert('Não foi possível adicionar o item: ' + error.message)
       }
     }
   }
 
-  // Delete a shopping list
   const excluirLista = async (listaId: string | number) => {
     if (!confirm('Tem certeza que deseja excluir esta lista?')) return
 
     try {
-      // First delete all items in the list
       const { error: itensError } = await supabase
         .from('shopping_items')
         .delete()
         .eq('list_id', listaId)
 
-      if (itensError) {
-        console.error('Erro ao excluir itens da lista:', itensError)
-        throw itensError
-      }
+      if (itensError) throw itensError
 
-      // Then delete the list itself
       const { error } = await supabase
         .from('shopping_lists')
         .delete()
         .eq('id', listaId)
 
-      if (error) {
-        console.error('Erro ao excluir a lista:', error)
-        throw error
-      }
+      if (error) throw error
 
-      // Refresh lists after deletion
       buscarListas()
     } catch (error) {
       console.error('Erro ao excluir lista:', error)
       if (error instanceof Error) {
-        alert('Não foi possível excluir a lista de compras: ' + error.message)
-      } else {
-        alert('Não foi possível excluir a lista de compras')
+        alert('Não foi possível excluir a lista: ' + error.message)
       }
     }
   }
 
-  // Delete an item from a shopping list
   const excluirItem = async (itemId: string | number) => {
     try {
       const { error } = await supabase
@@ -193,64 +202,38 @@ export default function Compras() {
         .delete()
         .eq('id', itemId)
 
-      if (error) {
-        console.error('Erro ao excluir item:', error)
-        throw error
-      }
+      if (error) throw error
 
-      // Refresh lists after item deletion
       buscarListas()
     } catch (error) {
       console.error('Erro ao excluir item:', error)
       if (error instanceof Error) {
-        alert('Não foi possível excluir o item da lista: ' + error.message)
-      } else {
-        alert('Não foi possível excluir o item da lista')
+        alert('Não foi possível excluir o item: ' + error.message)
       }
     }
   }
 
-  // Toggle item completion status
   const alternarConclusao = async (item: { id: string | number; concluido: boolean }) => {
     try {
-      // Make sure we're updating with the correct value
       const { error } = await supabase
         .from('shopping_items')
         .update({ completed: !item.concluido })
         .eq('id', item.id)
 
-      if (error) {
-        console.error('Erro ao atualizar status do item:', error)
-        throw error
-      }
+      if (error) throw error
 
-      // Refresh lists after updating item
       buscarListas()
     } catch (error) {
       console.error('Erro ao atualizar item:', error)
       if (error instanceof Error) {
         alert('Não foi possível atualizar o status do item: ' + error.message)
-      } else {
-        alert('Não foi possível atualizar o status do item')
       }
     }
   }
-  // Add this near the top of your component to verify authentication
-  useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      console.log("Authentication status:", session ? "Authenticated" : "Not authenticated")
-      if (session) console.log("User ID:", session.user.id)
-    }
 
-    checkAuth()
-  }, [])
-
-  // Load lists when component mounts
   useEffect(() => {
     buscarListas()
 
-    // Setup real-time subscription for changes
     const listasSubscription = supabase
       .channel('table-db-changes')
       .on('postgres_changes', {
@@ -262,7 +245,6 @@ export default function Compras() {
       })
       .subscribe()
 
-    // Subscribe to changes in shopping_items table
     const itensSubscription = supabase
       .channel('items-db-changes')
       .on('postgres_changes', {
@@ -274,7 +256,6 @@ export default function Compras() {
       })
       .subscribe()
 
-    // Cleanup subscriptions when component unmounts
     return () => {
       supabase.removeChannel(listasSubscription)
       supabase.removeChannel(itensSubscription)
@@ -286,7 +267,7 @@ export default function Compras() {
       <main className="flex-1 px-6 md:px-12 lg:px-24">
         <div className="space-y-6 pb-8 pt-6 md:pb-12 md:pt-10 lg:py-32 px-4 sm:px-6 md:px-8">
           <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold">Listas de Compras</h1>
+            <h1 className="text-3xl font-bold">Minhas Listas</h1>
             <Dialog open={mostrarNovaLista} onOpenChange={setMostrarNovaLista}>
               <DialogTrigger asChild>
                 <Button>
@@ -296,7 +277,7 @@ export default function Compras() {
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Criar Nova Lista de Compras</DialogTitle>
+                  <DialogTitle>Criar Nova Lista</DialogTitle>
                 </DialogHeader>
                 <form className="space-y-4" onSubmit={criarNovaLista}>
                   <div className="space-y-2">
@@ -323,9 +304,9 @@ export default function Compras() {
             </div>
           ) : listas.length === 0 ? (
             <div className="text-center py-12">
-              <ShoppingBag className="mx-auto h-12 w-12 text-gray-400" />
+              <List className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-lg font-medium">Nenhuma lista encontrada</h3>
-              <p className="mt-1 text-gray-500">Comece criando sua primeira lista de compras.</p>
+              <p className="mt-1 text-gray-500">Comece criando sua primeira lista.</p>
             </div>
           ) : (
             <div className="grid gap-6 md:grid-cols-2">
@@ -333,7 +314,7 @@ export default function Compras() {
                 <Card key={lista.id} className="p-6">
                   <div className="mb-4 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <ShoppingBag className="h-5 w-5" />
+                      <FolderOpen className="h-5 w-5" />
                       <h3 className="text-lg font-semibold">{lista.name}</h3>
                     </div>
                     <div className="flex items-center gap-2">
@@ -414,16 +395,76 @@ export default function Compras() {
                               <CheckCircle2 className="h-4 w-4" />
                             </Button>
                             <span className={item.concluido ? "line-through" : ""}>
-                              {item.name} (x{item.quantity})
+                              {item.name} {item.quantity > 1 && `(x${item.quantity})`}
                             </span>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => excluirItem(item.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <Dialog
+                              open={mostrarEditarItem && itemEditando?.id === item.id}
+                              onOpenChange={(open) => {
+                                setMostrarEditarItem(open)
+                                if (open) {
+                                  setItemEditando({
+                                    id: item.id,
+                                    nome: item.name,
+                                    quantidade: item.quantity
+                                  })
+                                } else {
+                                  setItemEditando(null)
+                                }
+                              }}
+                            >
+                              <DialogTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Editar Item</DialogTitle>
+                                </DialogHeader>
+                                <form onSubmit={editarItem} className="space-y-4">
+                                  <div className="space-y-2">
+                                    <Label htmlFor="editNomeItem">Nome do Item</Label>
+                                    <Input
+                                      id="editNomeItem"
+                                      placeholder="Digite o nome do item"
+                                      value={itemEditando?.nome || ""}
+                                      onChange={(e) => setItemEditando({
+                                        ...itemEditando,
+                                        nome: e.target.value
+                                      })}
+                                      required
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label htmlFor="editQuantidade">Quantidade</Label>
+                                    <Input
+                                      id="editQuantidade"
+                                      type="number"
+                                      min="1"
+                                      value={itemEditando?.quantidade || 1}
+                                      onChange={(e) => setItemEditando({
+                                        ...itemEditando,
+                                        quantidade: parseInt(e.target.value) || 1
+                                      })}
+                                      required
+                                    />
+                                  </div>
+                                  <Button className="w-full" type="submit">
+                                    Salvar Alterações
+                                  </Button>
+                                </form>
+                              </DialogContent>
+                            </Dialog>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => excluirItem(item.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       ))
                     )}
